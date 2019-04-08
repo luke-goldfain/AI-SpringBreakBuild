@@ -13,7 +13,9 @@ public class PreyController : MonoBehaviour {
         alert
     }
     private PreyState pState;
-    private Vector3 nextRoamPos;
+    public Vector3 NextRoamPos;
+
+    private GameObject flockTarget;
 
     private Vector3 enemyDir;
     readonly float fleeTime = 3f;
@@ -78,22 +80,28 @@ public class PreyController : MonoBehaviour {
     {
         if (other.tag == "Sound")
         {
-            enemyDir = other.transform.position;
+            enemyDir = other.transform.position - this.transform.position;
 
-            pState = PreyState.alert;
-            alertTimer = 0f;
-            print(this + "state set to alert");
+            if (pState != PreyState.flee)
+            {
+                pState = PreyState.alert;
+                alertTimer = 0f;
+                //print(this + " state set to alert");
+            }
         }
 
         if (other.tag == "PredatorScent")
         {
             ScentController sCont = other.GetComponent<ScentController>();
 
-            enemyDir = sCont.OrigPosition;
+            enemyDir = sCont.OrigPosition - this.transform.position;
 
-            pState = PreyState.alert;
-            alertTimer = 0f;
-            print(this + "state set to alert");
+            if (pState != PreyState.flee)
+            {
+                pState = PreyState.alert;
+                alertTimer = 0f;
+                //print(this + " state set to alert");
+            }
         }
     }
 
@@ -101,24 +109,45 @@ public class PreyController : MonoBehaviour {
     {
         alertTimer += Time.deltaTime;
 
-        if (alertTimer < alertTime)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(enemyDir);
-            rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
+        Quaternion targetRotation = Quaternion.LookRotation(enemyDir);
+        rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
 
-            rb.transform.Translate(Vector3.forward * speed * 0.5f);
-        }
-        else
+        rb.transform.Translate(Vector3.forward * speed * 0.5f);
+
+        if (alertTimer >= alertTime)
         {
             pState = PreyState.roam;
-            nextRoamPos = this.transform.position;
-            print(this + "state set to roam");
+            NextRoamPos = this.transform.position;
+            //print(this + "state set to roam");
         }
     }
 
     private void UpdateStateFlock()
     {
-        //todo
+        if (transform.position.x - NextRoamPos.x < 10 &&
+            transform.position.z - NextRoamPos.z < 10)
+        {
+            //NextRoamPos = new Vector3(transform.position.x + UnityEngine.Random.Range(-50f, 50f), transform.position.y, transform.position.z + UnityEngine.Random.Range(-50f, 50f));
+
+            NextRoamPos = flockTarget.transform.position;
+
+            /*if (NextRoamPos.x > worldUpperX || NextRoamPos.x < worldLowerX)
+            {
+                NextRoamPos.x = UnityEngine.Random.Range(worldLowerX, worldUpperX);
+            }
+            if (NextRoamPos.z > worldUpperZ || NextRoamPos.z < worldLowerZ)
+            {
+                NextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
+            }*/
+
+            pState = PreyState.roam;
+            ////print(this + " state set to roam");
+        }
+
+        rb.transform.Translate(Vector3.forward * speed * 1.5f);
+
+        Quaternion targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+        rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
     }
 
     private void UpdateStateFlee()
@@ -136,32 +165,32 @@ public class PreyController : MonoBehaviour {
         {
             pState = PreyState.alert;
             alertTimer = 0f;
-            print(this + "State set to alert");
+            ////print(this + "State set to alert");
         }
     }
 
     private void UpdateStateRoam()
     {
-        if (transform.position.x - nextRoamPos.x < 5 &&
-            transform.position.z - nextRoamPos.z < 5)
+        if (transform.position.x - NextRoamPos.x < 5 &&
+            transform.position.z - NextRoamPos.z < 5)
         {
-            nextRoamPos = new Vector3(transform.position.x + UnityEngine.Random.Range(-50f, 50f), transform.position.y, transform.position.z + UnityEngine.Random.Range(-50f, 50f));
+            NextRoamPos = new Vector3(transform.position.x + UnityEngine.Random.Range(-50f, 50f), transform.position.y, transform.position.z + UnityEngine.Random.Range(-50f, 50f));
             
             // Correct for values outside of intended worldspace. Currently this will result in
             // the assignment of completely random values within the range.
-            if (nextRoamPos.x > worldUpperX || nextRoamPos.x < worldLowerX)
+            if (NextRoamPos.x > worldUpperX || NextRoamPos.x < worldLowerX)
             {
-                nextRoamPos.x = UnityEngine.Random.Range(worldLowerX, worldUpperX);
+                NextRoamPos.x = UnityEngine.Random.Range(worldLowerX, worldUpperX);
             }
-            if (nextRoamPos.z > worldUpperZ || nextRoamPos.z < worldLowerZ)
+            if (NextRoamPos.z > worldUpperZ || NextRoamPos.z < worldLowerZ)
             {
-                nextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
+                NextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
             }
         }
 
         rb.transform.Translate(Vector3.forward * speed);
 
-        Quaternion targetRotation = Quaternion.LookRotation(nextRoamPos - rb.transform.position);
+        Quaternion targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
     }
 
@@ -176,16 +205,32 @@ public class PreyController : MonoBehaviour {
             Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.yellow);
             Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.yellow);
 
+            int layermask = ~(1 << 9);
+
             // Cast a ray forward and on a slightly larger angle for each iteration. This creates a cone of rays.
-            if (Physics.Raycast(transform.position, localForward + offset, out hit, 30f) ||
-                Physics.Raycast(transform.position, localForward - offset, out hit, 30f))
+            if (Physics.Raycast(transform.position, localForward + offset, out hit, 30f, layermask) ||
+                Physics.Raycast(transform.position, localForward - offset, out hit, 30f, layermask))
             {
+
+                if (hit.collider.tag == "Prey" && pState != PreyState.flee && pState != PreyState.flock)
+                {
+                    NextRoamPos = hit.transform.position;
+                    flockTarget = hit.collider.gameObject;
+
+                    pState = PreyState.flock;
+                    //print(this + "state set to flock");
+
+                    // debug
+                    Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.blue, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.blue, 0.5f);
+                }
+
                 if (hit.collider.tag == "Player" || hit.collider.tag == "Predator")
                 {
                     pState = PreyState.flee;
                     enemyDir = hit.transform.position - transform.position;
                     fleeTimer = 0f;
-                    print(this + "state set to flee");
+                    //print(this + "state set to flee");
 
                     // debug
                     Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.red, 0.5f);

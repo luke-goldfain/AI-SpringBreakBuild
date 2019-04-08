@@ -22,7 +22,7 @@ GameObject:
   - component: {fileID: 33721813977436576}
   - component: {fileID: 23573631444813680}
   - component: {fileID: 136947685807059518}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: PreyScentCylinder
   m_TagString: PreyScent
   m_Icon: {fileID: 0}

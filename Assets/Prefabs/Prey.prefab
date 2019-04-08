@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 54610540737804864}
   m_Layer: 0
   m_Name: Prey
-  m_TagString: Untagged
+  m_TagString: Prey
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -168,12 +168,12 @@ Rigidbody:
   m_GameObject: {fileID: 1961890686244564}
   serializedVersion: 2
   m_Mass: 1
-  m_Drag: 0
+  m_Drag: 1
   m_AngularDrag: 0
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 116
+  m_Constraints: 84
   m_CollisionDetection: 0
 --- !u!65 &65081417834201280
 BoxCollider:
@@ -198,6 +198,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8676235e760fa7d46abcf00089ad3355, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  NextRoamPos: {x: 0, y: 0, z: 0}
 --- !u!135 &135913185246572084
 SphereCollider:
   m_ObjectHideFlags: 1

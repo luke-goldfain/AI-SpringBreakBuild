@@ -122,11 +122,13 @@ public class WindDirection : MonoBehaviour {
 
     private void SpawnPredatorScentCylinder(GameObject predator)
     {
-        scentCylinders.Add(Instantiate(PredatorScentCylinder, predator.transform));
+        if (predator.activeSelf)
+            scentCylinders.Add(Instantiate(PredatorScentCylinder, predator.transform));
     }
 
     private void SpawnPreyScentCylinder(GameObject prey)
     {
-        scentCylinders.Add(Instantiate(PreyScentCylinder, prey.transform));
+        if (prey.activeSelf)
+            scentCylinders.Add(Instantiate(PreyScentCylinder, prey.transform));
     }
 }
