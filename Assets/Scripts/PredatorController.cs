@@ -30,7 +30,7 @@ public class PredatorController : MonoBehaviour {
     private int raycastNum = 8;
     RaycastHit hit;
 
-    private float speed = 0.16f;
+    private float speed = 0.2f;
     private float rotSpeed = 10f;
 
     Rigidbody rb;
@@ -97,7 +97,7 @@ public class PredatorController : MonoBehaviour {
             {
                 predState = PredatorState.alert;
                 alertTimer = 0f;
-                print(this + " state set to alert");
+                //print(this + " state set to alert");
             }
         }
 
@@ -111,7 +111,7 @@ public class PredatorController : MonoBehaviour {
             {
                 predState = PredatorState.alert;
                 alertTimer = 0f;
-                print(this + " state set to alert");
+                //print(this + " state set to alert");
             }
         }
     }
@@ -129,7 +129,7 @@ public class PredatorController : MonoBehaviour {
         {
             predState = PredatorState.roam;
             NextRoamPos = this.transform.position;
-            print(this + " state set to roam");
+            //print(this + " state set to roam");
         }
     }
 
@@ -192,7 +192,7 @@ public class PredatorController : MonoBehaviour {
 
                     predState = PredatorState.hunt;
                     huntTimer = 0f;
-                    print(this + " state set to hunt");
+                    //print(this + " state set to hunt");
 
                     // debug
                     Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.green, 0.5f);
@@ -206,7 +206,7 @@ public class PredatorController : MonoBehaviour {
 
                     predState = PredatorState.hunt;
                     huntTimer = 0f;
-                    print(this + " state set to hunt");
+                    //print(this + " state set to hunt");
 
                     // debug
                     Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.green, 0.5f);
@@ -217,7 +217,7 @@ public class PredatorController : MonoBehaviour {
             {
                 predState = PredatorState.alert;
                 alertTimer = 0f;
-                print(this + " state set to alert");
+                //print(this + " state set to alert");
             }
         }
     }
