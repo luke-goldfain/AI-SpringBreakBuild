@@ -14,7 +14,13 @@ public class PreyController : MonoBehaviour {
     }
     private PreyState pState;
     private PreyState pPrevState;
+
+    private bool oneTimeStateActionsExecuted;
+
     public Vector3 NextRoamPos;
+
+    private Vector3 reroutePos;
+    private bool isRerouting;
 
     private Quaternion targetRotation;
 
@@ -35,10 +41,8 @@ public class PreyController : MonoBehaviour {
     private float speed = 0.16f;
     private float rotSpeed = 10f;
 
-    private float maxFlockDist = 20f;
+    public float maxFlockDist = 20f;
     //private float minFlockDist = 5f;
-
-    private bool oneTimeStateActionsExecuted;
 
     Rigidbody rb;
 
@@ -56,6 +60,7 @@ public class PreyController : MonoBehaviour {
         worldUpperZ = 50f;
 
         oneTimeStateActionsExecuted = false;
+        isRerouting = false;
 	}
 	
 	// Update is called once per frame
@@ -108,6 +113,8 @@ public class PreyController : MonoBehaviour {
                 }
             case PreyState.flee:
                 {
+                    targetRotation = Quaternion.LookRotation(-enemyDir);
+
                     fleeTimer = 0f;
                     break;
                 }
@@ -211,6 +218,16 @@ public class PreyController : MonoBehaviour {
             targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
         }
 
+        // Account for rerouting as well
+        if (isRerouting &&
+            transform.position.x - reroutePos.x < 1 &&
+            transform.position.z - reroutePos.z < 1)
+        {
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+
+            isRerouting = false;
+        }
+
         // Move a little bit faster than in roam state
         rb.transform.Translate(Vector3.forward * speed * 1.25f);
 
@@ -224,7 +241,6 @@ public class PreyController : MonoBehaviour {
 
         if (fleeTimer < fleeTime) // Flee opposite direction
         {
-            targetRotation = Quaternion.LookRotation(-enemyDir);
             rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
 
             rb.transform.Translate(Vector3.forward * speed * 2);
@@ -233,6 +249,15 @@ public class PreyController : MonoBehaviour {
         {
             pState = PreyState.alert;
             ////print(this + "State set to alert");
+        }
+
+        if (isRerouting &&
+            transform.position.x - reroutePos.x < 1 &&
+            transform.position.z - reroutePos.z < 1)
+        {
+            targetRotation = Quaternion.LookRotation(-enemyDir);
+
+            isRerouting = false;
         }
     }
 
@@ -255,6 +280,16 @@ public class PreyController : MonoBehaviour {
             }
 
             targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+        }
+
+        // Account for the agent rerouting and having reached their reroute point
+        if (isRerouting && 
+            transform.position.x - reroutePos.x < 1 &&
+            transform.position.z - reroutePos.z < 1)
+        {
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+
+            isRerouting = false;
         }
 
         rb.transform.Translate(Vector3.forward * speed);
@@ -304,27 +339,68 @@ public class PreyController : MonoBehaviour {
                     Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.red, 0.5f);
                 }
 
-                // Redirect if there is an obstacle in the way, regardless of state
-                /*if (hit.collider.tag == "Obstacle")
+                // Redirect if there is an obstacle in the way, with slight changes to calculation based on state
+                if (hit.collider.tag == "Obstacle")
                 {
                     if (pState == PreyState.roam || pState == PreyState.flock)
                     {
-                        //if (Vector3.Dot((NextRoamPos - this.transform.position).normalized, (hit.transform.position - this.transform.position).normalized) > .8f)
-                        if (AreSameDirection(NextRoamPos - this.transform.position, hit.transform.position - this.transform.position))
+                        if (AreSameDirection(NextRoamPos - this.transform.position, hit.transform.position - this.transform.position) &&
+                            Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, NextRoamPos))
                         {
-                            print(this + " redirecting around obstacle");
-                            targetRotation *= Quaternion.Euler(Vector3.up * 5f);
-
-                            //NextRoamPos = transform.TransformPoint(targetRotation.eulerAngles * (hit.transform.position - this.transform.position).magnitude);
-
-                            // debug
-                            Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.gray, 0.5f);
-                            Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.gray, 0.5f);
+                            targetRotation = Quaternion.LookRotation(RerouteAroundObstacle());
                         }
                     }
-                }*/
+
+                    if (pState == PreyState.flee)
+                    {
+                        if (AreSameDirection(-enemyDir, hit.transform.position - this.transform.position) &&
+                            Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, -enemyDir))
+                        {
+                            targetRotation = Quaternion.LookRotation(RerouteAroundObstacle());
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private Vector3 RerouteAroundObstacle()
+    {
+        int layermask = ~(1 << 9);
+
+        Transform[] rerouteTransforms = hit.collider.gameObject.GetComponentsInChildren<Transform>();
+
+        for (int j = 0; j < rerouteTransforms.Length; j++)
+        {
+            if (rerouteTransforms[j].gameObject.tag != "Obstacle")
+            {
+                reroutePos = rerouteTransforms[j].transform.position;
+
+                if (Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask) ||
+                    Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask))
+                {
+                    if (hit.collider.tag == "obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
+                    {
+                        j++;
+
+                        // debug
+                        Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.red, 0.5f);
+                    }
+                    else
+                    {
+                        // debug
+                        Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.green, 1f);
+                        print(this + " redirecting to " + rerouteTransforms[j]);
+
+                        isRerouting = true;
+
+                        return reroutePos - this.transform.position;
+                    }
+                }
+            }
+        }
+
+        return NextRoamPos;
     }
 
     private bool AreSameDirection(Vector3 dir1, Vector3 dir2)

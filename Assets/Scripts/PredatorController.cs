@@ -13,8 +13,16 @@ public class PredatorController : MonoBehaviour {
         alert
     }
     private PredatorState predState;
+    private PredatorState predPrevState;
+
+    private bool oneTimeStateActionsExecuted;
 
     public Vector3 NextRoamPos;
+
+    private Vector3 reroutePos;
+    private bool isRerouting;
+
+    private Quaternion targetRotation;
 
     private Vector3 preyDir;
 
@@ -41,11 +49,14 @@ public class PredatorController : MonoBehaviour {
         rb = this.GetComponent<Rigidbody>();
 
         predState = PredatorState.roam;
+        predPrevState = PredatorState.alert;
 
         worldLowerX = -50f;
         worldUpperX = 50f;
         worldLowerZ = -50f;
         worldUpperZ = 50f;
+
+        oneTimeStateActionsExecuted = false;
     }
 	
 	// Update is called once per frame
@@ -58,7 +69,13 @@ public class PredatorController : MonoBehaviour {
 
         UpdateCastVisionRays();
 
-        // todo: hearing, smell
+        if (predPrevState != predState) oneTimeStateActionsExecuted = false;
+        else oneTimeStateActionsExecuted = true;
+
+        if (!oneTimeStateActionsExecuted)
+        {
+            ExecuteOneTimeStateActions();
+        }
 
         switch (predState)
         {
@@ -72,6 +89,38 @@ public class PredatorController : MonoBehaviour {
                 UpdateStateAlert();
                 break;
         }
+    }
+
+    private void ExecuteOneTimeStateActions()
+    {
+        print(this + " state from " + predPrevState + " to " + predState);
+
+        switch (predState)
+        {
+            case PredatorState.roam:
+                {
+                    NextRoamPos = new Vector3(transform.position.x + UnityEngine.Random.Range(-50f, 50f), transform.position.y, transform.position.z + UnityEngine.Random.Range(-50f, 50f));
+
+                    targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+                    break;
+                }
+            case PredatorState.hunt:
+                {
+                    targetRotation = Quaternion.LookRotation(preyDir);
+
+                    huntTimer = 0f;
+                    break;
+                }
+            case PredatorState.alert:
+                {
+                    targetRotation = Quaternion.LookRotation(preyDir);
+
+                    alertTimer = 0f;
+                    break;
+                }
+        }
+
+        predPrevState = predState;
     }
 
     private void OnCollisionEnter(Collision collision)
@@ -96,7 +145,6 @@ public class PredatorController : MonoBehaviour {
             if (predState != PredatorState.hunt)
             {
                 predState = PredatorState.alert;
-                alertTimer = 0f;
                 //print(this + " state set to alert");
             }
         }
@@ -110,7 +158,6 @@ public class PredatorController : MonoBehaviour {
             if (predState != PredatorState.hunt)
             {
                 predState = PredatorState.alert;
-                alertTimer = 0f;
                 //print(this + " state set to alert");
             }
         }
@@ -120,7 +167,7 @@ public class PredatorController : MonoBehaviour {
     {
         alertTimer += Time.deltaTime;
 
-        Quaternion targetRotation = Quaternion.LookRotation(preyDir);
+        targetRotation = Quaternion.LookRotation(preyDir);
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
 
         rb.transform.Translate(Vector3.forward * speed * 0.5f);
@@ -135,11 +182,19 @@ public class PredatorController : MonoBehaviour {
 
     private void UpdateStateHunt()
     {
-        huntTimer++;
+        huntTimer += Time.deltaTime;
+
+        if (isRerouting &&
+            transform.position.x - reroutePos.x < 1 &&
+            transform.position.z - reroutePos.z < 1)
+        {
+            targetRotation = Quaternion.LookRotation(preyDir);
+
+            isRerouting = false;
+        }
 
         rb.transform.Translate(Vector3.forward * speed * 2f);
 
-        Quaternion targetRotation = Quaternion.LookRotation(preyDir);
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
     }
 
@@ -160,11 +215,22 @@ public class PredatorController : MonoBehaviour {
             {
                 NextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
             }
+
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+        }
+
+        // Account for the agent rerouting and having reached their reroute point
+        if (isRerouting &&
+            transform.position.x - reroutePos.x < 1 &&
+            transform.position.z - reroutePos.z < 1)
+        {
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+
+            isRerouting = false;
         }
 
         rb.transform.Translate(Vector3.forward * speed);
 
-        Quaternion targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
     }
     
@@ -174,7 +240,7 @@ public class PredatorController : MonoBehaviour {
 
         for (float i = 0; i < raycastNum; i++)
         {
-            Vector3 offset = new Vector3(0f, 0f, i / 15);
+            Vector3 offset = new Vector3(i/25, 0f, i/25);
 
             Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.yellow);
             Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.yellow);
@@ -191,7 +257,6 @@ public class PredatorController : MonoBehaviour {
                     preyDir = hit.transform.position - this.transform.position;
 
                     predState = PredatorState.hunt;
-                    huntTimer = 0f;
                     //print(this + " state set to hunt");
 
                     // debug
@@ -205,20 +270,91 @@ public class PredatorController : MonoBehaviour {
                     preyDir = hit.transform.position - this.transform.position;
 
                     predState = PredatorState.hunt;
-                    huntTimer = 0f;
                     //print(this + " state set to hunt");
 
                     // debug
                     Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.green, 0.5f);
                     Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.green, 0.5f);
                 }
+
+                if (hit.collider.tag == "Obstacle")
+                {
+                    if (predState == PredatorState.roam)
+                    {
+                        if (AreSameDirection(NextRoamPos - this.transform.position, hit.transform.position - this.transform.position) &&
+                            Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, NextRoamPos))
+                        {
+                            targetRotation = Quaternion.LookRotation(RerouteAroundObstacle());
+                        }
+                    }
+
+                    if (predState == PredatorState.hunt)
+                    {
+                        if (AreSameDirection(preyDir, hit.transform.position - this.transform.position) &&
+                            Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, preyDir))
+                        {
+                            targetRotation = Quaternion.LookRotation(RerouteAroundObstacle());
+                        }
+                    }
+                }
             }
             else if (predState == PredatorState.hunt && huntTimer >= huntMinTime) // If the predator stops seeing prey, they go on alert
             {
                 predState = PredatorState.alert;
-                alertTimer = 0f;
                 //print(this + " state set to alert");
             }
         }
+    }
+
+    private Vector3 RerouteAroundObstacle()
+    {
+        int layermask = ~(1 << 9);
+
+        Transform[] rerouteTransforms = hit.collider.gameObject.GetComponentsInChildren<Transform>();
+
+        for (int j = 0; j < rerouteTransforms.Length; j++)
+        {
+            if (rerouteTransforms[j].gameObject.tag != "Obstacle")
+            {
+                reroutePos = rerouteTransforms[j].transform.position;
+
+                if (Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask) ||
+                    Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask))
+                {
+                    if (hit.collider.tag == "obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
+                    {
+                        j++;
+
+                        // debug
+                        Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.red, 0.5f);
+                    }
+                    else
+                    {
+                        // debug
+                        Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.green, 1f);
+                        print(this + " redirecting to " + rerouteTransforms[j]);
+
+                        isRerouting = true;
+
+                        return reroutePos - this.transform.position;
+                    }
+                }
+            }
+        }
+
+        return NextRoamPos;
+    }
+
+    private bool AreSameDirection(Vector3 dir1, Vector3 dir2)
+    {
+        dir1.Normalize();
+        dir2.Normalize();
+
+        if (dir1.x - dir2.x < 0.2f && dir1.z - dir2.z < 0.2f)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
