@@ -188,8 +188,10 @@ public class PreyController : MonoBehaviour {
             //print(this + " state set to roam");
         }
 
+        Vector3 tempRoamPos = NextRoamPos;
+
         // Get the flock target's next roam position
-        Vector3 tempRoamPos = flockTarget.GetComponent<PreyController>().NextRoamPos;
+        if (flockTarget) { tempRoamPos = flockTarget.GetComponent<PreyController>().NextRoamPos; }
 
         // Set this agent's roam position randomly within a certain range of the flock target's roam position,
         // whether this agent's roam position is too far from it or it has reached its current roam position already.
@@ -376,10 +378,10 @@ public class PreyController : MonoBehaviour {
             {
                 reroutePos = rerouteTransforms[j].transform.position;
 
-                if (Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask) ||
-                    Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask))
+                if (Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask) ||
+                    Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask))
                 {
-                    if (hit.collider.tag == "obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
+                    if (hit.collider.tag == "Obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
                     {
                         j++;
 

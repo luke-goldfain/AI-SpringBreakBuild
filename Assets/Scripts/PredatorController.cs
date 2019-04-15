@@ -318,10 +318,10 @@ public class PredatorController : MonoBehaviour {
             {
                 reroutePos = rerouteTransforms[j].transform.position;
 
-                if (Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask) ||
-                    Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask))
+                if (Physics.Raycast(reroutePos, this.NextRoamPos - reroutePos, out hit, Vector3.Distance(reroutePos, this.NextRoamPos), layermask) ||
+                    Physics.Raycast(reroutePos, this.transform.position - reroutePos, out hit, Vector3.Distance(reroutePos, this.transform.position), layermask))
                 {
-                    if (hit.collider.tag == "obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
+                    if (hit.transform.tag == "Obstacle") // todo: This never executes, even though some of the reroute points should have the obstacle in the way.
                     {
                         j++;
 
