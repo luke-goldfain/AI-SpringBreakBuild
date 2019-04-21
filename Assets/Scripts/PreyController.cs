@@ -392,7 +392,7 @@ public class PreyController : MonoBehaviour {
                     {
                         // debug
                         Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.green, 1f);
-                        print(this + " redirecting to " + rerouteTransforms[j]);
+                        //print(this + " redirecting to " + rerouteTransforms[j]);
 
                         isRerouting = true;
 

@@ -193,6 +193,11 @@ public class PredatorController : MonoBehaviour {
             isRerouting = false;
         }
 
+        if (!isRerouting)
+        {
+            targetRotation = Quaternion.LookRotation(preyDir);
+        }
+
         rb.transform.Translate(Vector3.forward * speed * 2f);
 
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
@@ -332,7 +337,7 @@ public class PredatorController : MonoBehaviour {
                     {
                         // debug
                         Debug.DrawRay(reroutePos, (this.transform.position - reroutePos), Color.green, 1f);
-                        print(this + " redirecting to " + rerouteTransforms[j]);
+                        //print(this + " redirecting to " + rerouteTransforms[j]);
 
                         isRerouting = true;
 
