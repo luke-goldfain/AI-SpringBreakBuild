@@ -131,6 +131,8 @@ public class PredatorController : MonoBehaviour {
             if (predState == PredatorState.hunt)
             {
                 collision.gameObject.SetActive(false);
+
+                predState = PredatorState.roam;
             }
         }
 

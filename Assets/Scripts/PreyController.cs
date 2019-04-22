@@ -5,14 +5,15 @@ using UnityEngine;
 
 public class PreyController : MonoBehaviour {
 
-    enum PreyState
+    public enum PreyState
     {
         roam,
         flee,
         flock,
-        alert
+        alert,
+        eat
     }
-    private PreyState pState;
+    public PreyState PrState;
     private PreyState pPrevState;
 
     private bool oneTimeStateActionsExecuted;
@@ -44,6 +45,13 @@ public class PreyController : MonoBehaviour {
     public float maxFlockDist = 20f;
     //private float minFlockDist = 5f;
 
+    private GameObject eatTarget;
+    readonly float eatTime = 2f;
+    float eatTimer;
+    readonly float hungryTime = 10f;
+    float timeSinceAte;
+
+
     Rigidbody rb;
 
 	// Use this for initialization
@@ -51,13 +59,15 @@ public class PreyController : MonoBehaviour {
     {
         rb = this.GetComponent<Rigidbody>();
 
-        pState = PreyState.roam;
+        PrState = PreyState.roam;
         pPrevState = PreyState.alert;
 
         worldLowerX = -50f;
         worldUpperX = 50f;
         worldLowerZ = -50f;
         worldUpperZ = 50f;
+
+        timeSinceAte = hungryTime;
 
         oneTimeStateActionsExecuted = false;
         isRerouting = false;
@@ -71,9 +81,22 @@ public class PreyController : MonoBehaviour {
         // hack to force x, z rotation
         transform.rotation = new Quaternion(0f, transform.rotation.y, 0f, transform.rotation.w);
 
+        // Always increase time since agent last ate
+        timeSinceAte += Time.deltaTime;
+
+        // Indicate whether agent is ready to eat with a material change
+        if (timeSinceAte >= hungryTime)
+        {
+            this.GetComponent<MeshRenderer>().material.color = Color.white;
+        }
+        else
+        {
+            this.GetComponent<MeshRenderer>().material.color = new Color(.5f, 1f, .5f);
+        }
+
         UpdateCastVisionRays();
 
-        if (pPrevState != pState) oneTimeStateActionsExecuted = false;
+        if (pPrevState != PrState) oneTimeStateActionsExecuted = false;
         else oneTimeStateActionsExecuted = true;
 
         if (!oneTimeStateActionsExecuted)
@@ -81,7 +104,7 @@ public class PreyController : MonoBehaviour {
             ExecuteOneTimeStateActions();
         }
 
-        switch (pState)
+        switch (PrState)
         {
             case PreyState.roam:
                 UpdateStateRoam();
@@ -95,14 +118,17 @@ public class PreyController : MonoBehaviour {
             case PreyState.alert:
                 UpdateStateAlert();
                 break;
+            case PreyState.eat:
+                UpdateStateEat();
+                break;
         }
     }
 
     private void ExecuteOneTimeStateActions()
     {
-        print(this + " state from " + pPrevState + " to " + pState);
+        print(this + " state from " + pPrevState + " to " + PrState);
 
-        switch (pState)
+        switch (PrState)
         {
             case PreyState.roam:
                 {
@@ -129,9 +155,15 @@ public class PreyController : MonoBehaviour {
                     targetRotation = Quaternion.LookRotation(enemyDir);
                     break;
                 }
+            case PreyState.eat:
+                {
+                    eatTimer = 0f;
+                    targetRotation = Quaternion.LookRotation(eatTarget.transform.position - rb.transform.position);
+                    break;
+                }
         }
 
-        pPrevState = pState;
+        pPrevState = PrState;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -140,9 +172,9 @@ public class PreyController : MonoBehaviour {
         {
             enemyDir = other.transform.position - this.transform.position;
 
-            if (pState != PreyState.flee)
+            if (PrState != PreyState.flee)
             {
-                pState = PreyState.alert;
+                PrState = PreyState.alert;
                 //print(this + " state set to alert");
             }
         }
@@ -153,11 +185,36 @@ public class PreyController : MonoBehaviour {
 
             enemyDir = sCont.OrigPosition - this.transform.position;
 
-            if (pState != PreyState.flee)
+            if (PrState != PreyState.flee)
             {
-                pState = PreyState.alert;
+                PrState = PreyState.alert;
                 //print(this + " state set to alert");
             }
+        }
+    }
+
+    private void UpdateStateEat()
+    {
+        if (Vector3.Distance(this.transform.position, eatTarget.transform.position) > 3f)
+        {
+            rb.transform.Translate(Vector3.forward * speed * 1.5f);
+            
+            rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
+        }
+        else
+        {
+            rb.transform.rotation = targetRotation;
+
+            eatTimer += Time.deltaTime;
+        }
+
+        if (eatTimer >= eatTime)
+        {
+            timeSinceAte = 0f;
+
+            eatTarget.SetActive(false);
+
+            PrState = PreyState.roam;
         }
     }
 
@@ -171,7 +228,7 @@ public class PreyController : MonoBehaviour {
 
         if (alertTimer >= alertTime)
         {
-            pState = PreyState.roam;
+            PrState = PreyState.roam;
             NextRoamPos = this.transform.position;
             //print(this + "state set to roam");
         }
@@ -179,19 +236,35 @@ public class PreyController : MonoBehaviour {
 
     private void UpdateStateFlock()
     {
+        // Flee if the flock target has been destroyed
+        if (!flockTarget)
+        {
+            enemyDir = NextRoamPos;
+
+            this.PrState = PreyState.flee;
+        }
+
+        // Flee if the flock target is fleeing
+        if (flockTarget.GetComponentInParent<PreyController>().PrState == PreyState.flee)
+        {
+            enemyDir = NextRoamPos;
+
+            this.PrState = PreyState.flee;
+        }
+
         // Break out of flock state if distance from flock target is higher than maxFlockDistance
         // Keep in mind that the agent can always switch to flee from this state as well.
         if (transform.position.x - flockTarget.transform.position.x > maxFlockDist &&
             transform.position.z - flockTarget.transform.position.x > maxFlockDist)
         {
-            pState = PreyState.roam;
+            PrState = PreyState.roam;
             //print(this + " state set to roam");
         }
 
         Vector3 tempRoamPos = NextRoamPos;
 
         // Get the flock target's next roam position
-        if (flockTarget) { tempRoamPos = flockTarget.GetComponent<PreyController>().NextRoamPos; }
+        if (flockTarget) { tempRoamPos = flockTarget.GetComponentInParent<PreyController>().NextRoamPos; }
 
         // Set this agent's roam position randomly within a certain range of the flock target's roam position,
         // whether this agent's roam position is too far from it or it has reached its current roam position already.
@@ -249,7 +322,7 @@ public class PreyController : MonoBehaviour {
         }
         else // switch to alert state
         {
-            pState = PreyState.alert;
+            PrState = PreyState.alert;
             ////print(this + "State set to alert");
         }
 
@@ -317,12 +390,12 @@ public class PreyController : MonoBehaviour {
                 Physics.Raycast(transform.position, localForward - offset, out hit, 30f, layermask))
             {
 
-                if (hit.collider.tag == "Prey" && pState != PreyState.flee && pState != PreyState.flock)
+                if (hit.collider.tag == "Prey" && PrState != PreyState.flee && PrState != PreyState.flock)
                 {
                     NextRoamPos = hit.transform.position;
                     flockTarget = hit.collider.gameObject;
 
-                    pState = PreyState.flock;
+                    PrState = PreyState.flock;
                     //print(this + "state set to flock");
 
                     // debug
@@ -332,7 +405,7 @@ public class PreyController : MonoBehaviour {
 
                 if (hit.collider.tag == "Player" || hit.collider.tag == "Predator")
                 {
-                    pState = PreyState.flee;
+                    PrState = PreyState.flee;
                     enemyDir = hit.transform.position - transform.position;
                     //print(this + "state set to flee");
 
@@ -341,10 +414,17 @@ public class PreyController : MonoBehaviour {
                     Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.red, 0.5f);
                 }
 
+                if (hit.collider.tag == "PreyFood" && timeSinceAte >= hungryTime)
+                {
+                    PrState = PreyState.eat;
+
+                    eatTarget = hit.collider.gameObject;
+                }
+
                 // Redirect if there is an obstacle in the way, with slight changes to calculation based on state
                 if (hit.collider.tag == "Obstacle")
                 {
-                    if (pState == PreyState.roam || pState == PreyState.flock)
+                    if (PrState == PreyState.roam || PrState == PreyState.flock)
                     {
                         if (AreSameDirection(NextRoamPos - this.transform.position, hit.transform.position - this.transform.position) &&
                             Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, NextRoamPos))
@@ -353,7 +433,7 @@ public class PreyController : MonoBehaviour {
                         }
                     }
 
-                    if (pState == PreyState.flee)
+                    if (PrState == PreyState.flee)
                     {
                         if (AreSameDirection(-enemyDir, hit.transform.position - this.transform.position) &&
                             Vector3.Distance(this.transform.position, hit.transform.position) < Vector3.Distance(this.transform.position, -enemyDir))

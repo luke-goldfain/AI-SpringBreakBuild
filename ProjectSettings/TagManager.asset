@@ -10,6 +10,7 @@ TagManager:
   - PreyScent
   - Predator
   - Obstacle
+  - PreyFood
   layers:
   - Default
   - TransparentFX

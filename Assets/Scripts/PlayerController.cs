@@ -8,12 +8,19 @@ public class PlayerController : MonoBehaviour {
     Rigidbody rb;
     float dirX, dirZ;
     float speed;
+    bool isAttacking;
+    float attackCooldown = 0.5f;
+    float attackTimer;
 
     public GameObject soundSphere;
     private List<GameObject> soundSpheres;
     private float soundSphereCD = 1f;
     private float soundSphereTime;
     private float soundScale;
+
+    public GameObject Projectile;
+    public GameObject ProjectileSpawn;
+
 
 	// Use this for initialization
 	void Start ()
@@ -25,13 +32,64 @@ public class PlayerController : MonoBehaviour {
         soundScale = 1f;
 
         speed = 0.2f;
+
+        attackTimer = attackCooldown;
+
+        soundSphereTime = soundSphereCD;
 	}
 	
 	// Update is called once per frame
 	void Update ()
     {
         GetInput();
+
+        MovePlayer();
+        
+        attackTimer += Time.deltaTime;
+
+        soundSphereTime += Time.deltaTime;
+
+
+        if (isAttacking)
+        {
+            AttackOnCooldown();
+        }
 	}
+
+    private void AttackOnCooldown()
+    {
+        if (attackTimer >= attackCooldown)
+        {
+            Instantiate(Projectile, ProjectileSpawn.transform);
+
+            SpawnSoundSphere(20f);
+
+            attackTimer = 0f;
+        }
+    }
+
+    private void MovePlayer()
+    {
+        if (dirX != 0 || dirZ != 0)
+        {
+            rb.transform.localRotation = Quaternion.LookRotation(new Vector3(dirX, 0, dirZ));
+
+            SpawnSoundSphereOnCooldown();
+
+            speed = 0.2f;
+
+            if (Input.GetKey(KeyCode.LeftShift))
+            {
+                speed = 0.5f;
+            }
+        }
+        else
+        {
+            DestroyAllSounds();
+        }
+
+        rb.transform.Translate(Vector3.forward * speed);
+    }
 
     private void GetInput()
     {
@@ -60,31 +118,18 @@ public class PlayerController : MonoBehaviour {
             dirZ = -1;
         }
 
-        if (dirX != 0 || dirZ != 0)
+        if (Input.GetKey(KeyCode.A))
         {
-            rb.transform.localRotation = Quaternion.LookRotation(new Vector3(dirX, 0, dirZ));
-
-            SpawnSoundSphereOnCooldown();
-
-            speed = 0.2f;
-
-            if (Input.GetKey(KeyCode.LeftShift))
-            {
-                speed = 0.5f;
-            }
+            isAttacking = true;
         }
         else
         {
-            DestroyAllSounds();
+            isAttacking = false;
         }
-
-        rb.transform.Translate(Vector3.forward * speed);
     }
 
     private void SpawnSoundSphereOnCooldown()
     {
-        soundSphereTime += Time.deltaTime;
-
         if (Input.GetKey(KeyCode.LeftShift))
         {
             soundSphereTime += (Time.deltaTime * 2);
@@ -99,13 +144,7 @@ public class PlayerController : MonoBehaviour {
         // Spawn a single sound sphere on the player's location at the cooldown specified.
         if (soundSphereTime >= soundSphereCD)
         {
-            soundSpheres.Add(Instantiate(soundSphere, this.transform));
-            soundSphereTime = 0f;
-
-            foreach (GameObject sp in soundSpheres)
-            {
-                sp.transform.localScale = new Vector3(soundScale, soundScale, soundScale);
-            }
+            SpawnSoundSphere(soundScale);
         }
 
         // Destroy all sound spheres (there should only ever be 1)
@@ -113,6 +152,17 @@ public class PlayerController : MonoBehaviour {
         if (soundSphereTime >= soundSphereCD / 5)
         {
             DestroyAllSounds();
+        }
+    }
+
+    private void SpawnSoundSphere(float scale)
+    {
+        soundSpheres.Add(Instantiate(soundSphere, this.transform));
+        soundSphereTime = 0f;
+
+        foreach (GameObject sp in soundSpheres)
+        {
+            sp.transform.localScale = new Vector3(scale, scale, scale);
         }
     }
 
