@@ -419,6 +419,9 @@ public class PreyController : MonoBehaviour {
                     PrState = PreyState.eat;
 
                     eatTarget = hit.collider.gameObject;
+
+                    // Plug in A* algorithm, to path to food
+                    this.GetComponent<AStarPathFinding>().PathTarget = eatTarget;
                 }
 
                 // Redirect if there is an obstacle in the way, with slight changes to calculation based on state
@@ -490,7 +493,7 @@ public class PreyController : MonoBehaviour {
         dir1.Normalize();
         dir2.Normalize();
 
-        if (dir1.x - dir2.x < 0.2f && dir1.z - dir2.z < 0.2f)
+        if (dir1.x - dir2.x < 0.35f && dir1.z - dir2.z < 0.35f)
         {
             return true;
         }

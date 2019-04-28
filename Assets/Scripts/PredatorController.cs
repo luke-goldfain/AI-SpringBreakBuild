@@ -357,7 +357,7 @@ public class PredatorController : MonoBehaviour {
         dir1.Normalize();
         dir2.Normalize();
 
-        if (dir1.x - dir2.x < 0.2f && dir1.z - dir2.z < 0.2f)
+        if (dir1.x - dir2.x < 0.35f && dir1.z - dir2.z < 0.35f)
         {
             return true;
         }
