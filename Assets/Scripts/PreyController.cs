@@ -35,7 +35,8 @@ public class PreyController : MonoBehaviour {
 
     float worldLowerX, worldUpperX,
           worldLowerZ, worldUpperZ;
-    
+
+    public float VisionLength = 30f;
     private int raycastNum = 8;
     RaycastHit hit;
 
@@ -199,7 +200,22 @@ public class PreyController : MonoBehaviour {
         {
             rb.transform.Translate(Vector3.forward * speed * 1.5f);
             
-            rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
+            // If the agent has a path available, rotate towards the next node on the path.
+            // Note: this results in an out-of-range exception when the path is only 1 node.
+            if (this.GetComponent<AStarPathFinding>().Path != null)
+            {
+                if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
+                {
+                    targetRotation = Quaternion.LookRotation(this.GetComponent<AStarPathFinding>().Path[1].WorldPosition - this.transform.position);
+                }
+                else
+                {
+                    targetRotation = Quaternion.LookRotation(eatTarget.transform.position - this.transform.position);
+                }
+                
+            }
+            
+            rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed * 2f);
         }
         else
         {
@@ -380,17 +396,17 @@ public class PreyController : MonoBehaviour {
         {
             Vector3 offset = new Vector3(i/25, 0f, i/25);
 
-            Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.yellow);
-            Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.yellow);
+            Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.yellow);
+            Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.yellow);
 
             int layermask = ~(1 << 9);
 
             // Cast a ray forward and on a slightly larger angle for each iteration. This creates a cone of rays.
-            if (Physics.Raycast(transform.position, localForward + offset, out hit, 30f, layermask) ||
-                Physics.Raycast(transform.position, localForward - offset, out hit, 30f, layermask))
+            if (Physics.Raycast(transform.position, localForward + offset, out hit, VisionLength, layermask) ||
+                Physics.Raycast(transform.position, localForward - offset, out hit, VisionLength, layermask))
             {
-
-                if (hit.collider.tag == "Prey" && PrState != PreyState.flee && PrState != PreyState.flock)
+                // Set state to flock if agent sees a fellow prey, and agent's state is not currently eat, flee, or flock
+                if (hit.collider.tag == "Prey" && PrState != PreyState.eat && PrState != PreyState.flee && PrState != PreyState.flock)
                 {
                     NextRoamPos = hit.transform.position;
                     flockTarget = hit.collider.gameObject;
@@ -399,10 +415,11 @@ public class PreyController : MonoBehaviour {
                     //print(this + "state set to flock");
 
                     // debug
-                    Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.blue, 0.5f);
-                    Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.blue, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.blue, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.blue, 0.5f);
                 }
 
+                // Set state to flee if agent sees a player or a predator. High priority state change, no requisites.
                 if (hit.collider.tag == "Player" || hit.collider.tag == "Predator")
                 {
                     PrState = PreyState.flee;
@@ -410,11 +427,12 @@ public class PreyController : MonoBehaviour {
                     //print(this + "state set to flee");
 
                     // debug
-                    Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.red, 0.5f);
-                    Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.red, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.red, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.red, 0.5f);
                 }
 
-                if (hit.collider.tag == "PreyFood" && timeSinceAte >= hungryTime)
+                // Set state to eat if agent sees food, agent is hungry, and agent is not currently fleeing.
+                if (hit.collider.tag == "PreyFood" && timeSinceAte >= hungryTime && PrState != PreyState.flee)
                 {
                     PrState = PreyState.eat;
 

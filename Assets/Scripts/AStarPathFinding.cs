@@ -6,6 +6,8 @@ public class AStarPathFinding : MonoBehaviour
 {
     public GameObject PathTarget;
 
+    public List<AStarNode> Path;
+
     AStarGrid grid;
 
     private void Awake()
@@ -76,18 +78,18 @@ public class AStarPathFinding : MonoBehaviour
 
     void RetracePath(AStarNode startNode, AStarNode endNode)
     {
-        List<AStarNode> path = new List<AStarNode>();
+        Path = new List<AStarNode>();
         AStarNode currentNode = endNode;
 
         while(currentNode != startNode)
         {
-            path.Add(currentNode);
+            Path.Add(currentNode);
             currentNode = currentNode.Parent;
         }
 
-        path.Reverse();
+        Path.Reverse();
 
-        grid.Path = path;
+        grid.Paths.Add(Path);
     }
 
     int GetDistance(AStarNode nodeA, AStarNode nodeB)

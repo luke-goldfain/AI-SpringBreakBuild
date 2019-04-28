@@ -35,6 +35,7 @@ public class PredatorController : MonoBehaviour {
     float worldLowerX, worldUpperX,
           worldLowerZ, worldUpperZ;
 
+    public float VisionLength = 30f;
     private int raycastNum = 8;
     RaycastHit hit;
 
@@ -249,14 +250,14 @@ public class PredatorController : MonoBehaviour {
         {
             Vector3 offset = new Vector3(i/25, 0f, i/25);
 
-            Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.yellow);
-            Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.yellow);
+            Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.yellow);
+            Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.yellow);
 
             int layermask = ~(1 << 9);
 
             // Cast a ray forward and on a slightly larger angle for each iteration. This creates a cone of rays.
-            if (Physics.Raycast(transform.position, localForward + offset, out hit, 30f, layermask) ||
-                Physics.Raycast(transform.position, localForward - offset, out hit, 30f, layermask))
+            if (Physics.Raycast(transform.position, localForward + offset, out hit, VisionLength, layermask) ||
+                Physics.Raycast(transform.position, localForward - offset, out hit, VisionLength, layermask))
             {
 
                 if (hit.collider.tag == "Prey")
@@ -267,8 +268,8 @@ public class PredatorController : MonoBehaviour {
                     //print(this + " state set to hunt");
 
                     // debug
-                    Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.green, 0.5f);
-                    Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.green, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.green, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.green, 0.5f);
                 }
 
                 if (hit.collider.tag == "Player")
@@ -280,8 +281,8 @@ public class PredatorController : MonoBehaviour {
                     //print(this + " state set to hunt");
 
                     // debug
-                    Debug.DrawRay(transform.position, (localForward + offset) * 30f, Color.green, 0.5f);
-                    Debug.DrawRay(transform.position, (localForward - offset) * 30f, Color.green, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward + offset) * VisionLength, Color.green, 0.5f);
+                    Debug.DrawRay(transform.position, (localForward - offset) * VisionLength, Color.green, 0.5f);
                 }
 
                 if (hit.collider.tag == "Obstacle")

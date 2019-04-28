@@ -16,10 +16,13 @@ public class AStarGrid : MonoBehaviour
     float nodeDiameter;
     int gridSizeX, gridSizeZ;
 
-    public List<AStarNode> Path;
+    // That's right, a list of lists of nodes
+    public List<List<AStarNode>> Paths;
 
     private void Start()
     {
+        Paths = new List<List<AStarNode>>();
+
         nodeDiameter = NodeRadius * 2;
         gridSizeX = Mathf.RoundToInt(GridWorldSize.x / nodeDiameter);
         gridSizeZ = Mathf.RoundToInt(GridWorldSize.z / nodeDiameter);
@@ -126,18 +129,25 @@ public class AStarGrid : MonoBehaviour
                 else if (n.IsWalkable) Gizmos.color = Color.white;
                 else Gizmos.color = Color.red;
 
-                if(Path != null)
+                if(Paths != null)
                 {
-                    if (Path.Contains(n))
+                    foreach (List<AStarNode> path in Paths)
                     {
-                        Gizmos.color = Color.blue;
+                        if (path.Contains(n))
+                        {
+                            Gizmos.color = Color.blue;
+                        }
                     }
                 }
 
                 Gizmos.DrawWireCube(n.WorldPosition, Vector3.one * (nodeDiameter - .1f));
             }
+        }
 
-
+        // Clear list of paths after rendering gizmos because otherwise it lags bad
+        if (Paths != null && Paths.Count > 0)
+        {
+            Paths.Clear();
         }
     }
 }
