@@ -196,40 +196,47 @@ public class PreyController : MonoBehaviour {
 
     private void UpdateStateEat()
     {
-        if (Vector3.Distance(this.transform.position, eatTarget.transform.position) > 3f)
+        if (eatTarget.activeInHierarchy)
         {
-            rb.transform.Translate(Vector3.forward * speed * 1.5f);
-            
-            // If the agent has a path available, rotate towards the next node on the path.
-            // Note: this results in an out-of-range exception when the path is only 1 node.
-            if (this.GetComponent<AStarPathFinding>().Path != null)
+            if (Vector3.Distance(this.transform.position, eatTarget.transform.position) > 2f)
             {
-                if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
+                rb.transform.Translate(Vector3.forward * speed * 1.5f);
+
+                // If the agent has a path available, rotate towards the next node on the path.
+                // Note: this results in an out-of-range exception when the path is only 1 node.
+                if (this.GetComponent<AStarPathFinding>().Path != null)
                 {
-                    targetRotation = Quaternion.LookRotation(this.GetComponent<AStarPathFinding>().Path[1].WorldPosition - this.transform.position);
+                    if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
+                    {
+                        targetRotation = Quaternion.LookRotation(this.GetComponent<AStarPathFinding>().Path[1].WorldPosition - this.transform.position);
+                    }
+                    else
+                    {
+                        targetRotation = Quaternion.LookRotation(eatTarget.transform.position - this.transform.position);
+                    }
+
                 }
-                else
-                {
-                    targetRotation = Quaternion.LookRotation(eatTarget.transform.position - this.transform.position);
-                }
-                
+
+                rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed * 2f);
             }
-            
-            rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed * 2f);
+            else
+            {
+                rb.transform.rotation = targetRotation;
+
+                eatTimer += Time.deltaTime;
+            }
+
+            if (eatTimer >= eatTime)
+            {
+                timeSinceAte = 0f;
+
+                eatTarget.SetActive(false);
+
+                PrState = PreyState.roam;
+            }
         }
         else
         {
-            rb.transform.rotation = targetRotation;
-
-            eatTimer += Time.deltaTime;
-        }
-
-        if (eatTimer >= eatTime)
-        {
-            timeSinceAte = 0f;
-
-            eatTarget.SetActive(false);
-
             PrState = PreyState.roam;
         }
     }
@@ -270,8 +277,9 @@ public class PreyController : MonoBehaviour {
 
         // Break out of flock state if distance from flock target is higher than maxFlockDistance
         // Keep in mind that the agent can always switch to flee from this state as well.
-        if (transform.position.x - flockTarget.transform.position.x > maxFlockDist &&
-            transform.position.z - flockTarget.transform.position.x > maxFlockDist)
+        if ((transform.position.x - flockTarget.transform.position.x > maxFlockDist &&
+            transform.position.z - flockTarget.transform.position.x > maxFlockDist) ||
+            IsOutOfBounds(this.transform.position))
         {
             PrState = PreyState.roam;
             //print(this + " state set to roam");
@@ -281,12 +289,12 @@ public class PreyController : MonoBehaviour {
 
         // Get the flock target's next roam position
         if (flockTarget) { tempRoamPos = flockTarget.GetComponentInParent<PreyController>().NextRoamPos; }
+        else { PrState = PreyState.roam; }
 
         // Set this agent's roam position randomly within a certain range of the flock target's roam position,
         // whether this agent's roam position is too far from it or it has reached its current roam position already.
-        if (tempRoamPos.x - this.NextRoamPos.x > maxFlockDist ||
-            tempRoamPos.z - this.NextRoamPos.z > maxFlockDist ||
-            (transform.position.x - NextRoamPos.x < 10 && transform.position.z - NextRoamPos.z < 10))
+        if (Vector3.Distance(tempRoamPos, this.NextRoamPos) > maxFlockDist ||
+            (transform.position.x - NextRoamPos.x < 5 && transform.position.z - NextRoamPos.z < 5))
         {
             tempRoamPos += new Vector3(UnityEngine.Random.Range(-maxFlockDist, maxFlockDist), 
                                        this.transform.position.y, 
@@ -370,6 +378,12 @@ public class PreyController : MonoBehaviour {
                 NextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
             }
 
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+        }
+
+        // Force target rotation if agent is out of bounds
+        if (IsOutOfBounds(this.transform.position))
+        {
             targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
         }
 
@@ -518,4 +532,16 @@ public class PreyController : MonoBehaviour {
 
         return false;
     }
+
+    private bool IsOutOfBounds(Vector3 position)
+    {
+        if (position.x > worldUpperX || position.x < worldLowerX ||
+            position.z > worldUpperZ || position.z < worldLowerZ)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
 }
