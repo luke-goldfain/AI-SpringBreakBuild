@@ -371,11 +371,11 @@ public class PreyController : MonoBehaviour {
             // the assignment of completely random values within the range.
             if (NextRoamPos.x > worldUpperX || NextRoamPos.x < worldLowerX)
             {
-                NextRoamPos.x = UnityEngine.Random.Range(worldLowerX, worldUpperX);
+                NextRoamPos = new Vector3(UnityEngine.Random.Range(worldLowerX, worldUpperX), NextRoamPos.y, NextRoamPos.z);
             }
             if (NextRoamPos.z > worldUpperZ || NextRoamPos.z < worldLowerZ)
             {
-                NextRoamPos.z = UnityEngine.Random.Range(worldLowerZ, worldUpperZ);
+                NextRoamPos = new Vector3(NextRoamPos.x, NextRoamPos.y, UnityEngine.Random.Range(worldLowerZ, worldUpperZ));
             }
 
             targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
