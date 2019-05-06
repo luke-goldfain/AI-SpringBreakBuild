@@ -18,6 +18,8 @@ public class PlayerController : MonoBehaviour {
     private float soundSphereTime;
     private float soundScale;
 
+    public float FootstepSoundScale;
+
     public GameObject Projectile;
     public GameObject ProjectileSpawn;
 
@@ -29,7 +31,7 @@ public class PlayerController : MonoBehaviour {
 
         soundSpheres = new List<GameObject>();
 
-        soundScale = 1f;
+        soundScale = FootstepSoundScale;
 
         speed = 0.2f;
 
@@ -62,7 +64,7 @@ public class PlayerController : MonoBehaviour {
         {
             Instantiate(Projectile, ProjectileSpawn.transform);
 
-            SpawnSoundSphere(20f);
+            SpawnSoundSphere(FootstepSoundScale * 5f);
 
             attackTimer = 0f;
         }
@@ -134,11 +136,11 @@ public class PlayerController : MonoBehaviour {
         {
             soundSphereTime += (Time.deltaTime * 2);
 
-            soundScale = 30f;
+            soundScale = FootstepSoundScale * 1.5f;
         }
         else
         {
-            soundScale = 20f;
+            soundScale = FootstepSoundScale;
         }
 
         // Spawn a single sound sphere on the player's location at the cooldown specified.
@@ -148,8 +150,9 @@ public class PlayerController : MonoBehaviour {
         }
 
         // Destroy all sound spheres (there should only ever be 1)
-        // when the timer hits 1/5 of the sphere spawn time.
-        if (soundSphereTime >= soundSphereCD / 5)
+        // when the timer hits 1/4 of the sphere spawn time
+        if ((soundSphereTime >= soundSphereCD / 4 && soundSphereTime < soundSphereCD) ||
+            (attackTimer >= attackCooldown / 2 && attackTimer < attackCooldown))
         {
             DestroyAllSounds();
         }

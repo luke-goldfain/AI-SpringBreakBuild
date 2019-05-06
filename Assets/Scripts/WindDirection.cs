@@ -122,13 +122,25 @@ public class WindDirection : MonoBehaviour {
 
     private void SpawnPredatorScentCylinder(GameObject predator)
     {
-        if (predator.activeSelf)
-            scentCylinders.Add(Instantiate(PredatorScentCylinder, predator.transform));
+        if (predator.activeInHierarchy)
+        {
+            GameObject sc = Instantiate(PredatorScentCylinder, predator.transform);
+
+            sc.GetComponent<ScentController>().ScentSource = predator;
+
+            scentCylinders.Add(sc);
+        }
     }
 
     private void SpawnPreyScentCylinder(GameObject prey)
     {
-        if (prey.activeSelf)
-            scentCylinders.Add(Instantiate(PreyScentCylinder, prey.transform));
+        if (prey.activeInHierarchy)
+        {
+            GameObject sc = Instantiate(PreyScentCylinder, prey.transform);
+
+            sc.GetComponent<ScentController>().ScentSource = prey;
+
+            scentCylinders.Add(sc);
+        }
     }
 }

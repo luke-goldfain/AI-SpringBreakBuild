@@ -6,6 +6,8 @@ public class ScentController : MonoBehaviour {
 
     public Vector3 OrigPosition;
 
+    public GameObject ScentSource;
+
 	// Use this for initialization
 	void Start ()
     {

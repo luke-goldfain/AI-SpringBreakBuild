@@ -11,6 +11,9 @@ public class AStarGrid : MonoBehaviour
     public LayerMask UnwalkableMask;
     public Vector3 GridWorldSize;
     public float NodeRadius;
+
+    public bool ShowGridGizmos;
+
     AStarNode[,] grid;
 
     float nodeDiameter;
@@ -56,7 +59,8 @@ public class AStarGrid : MonoBehaviour
 
             foreach (GameObject a in Agents)
             {
-                NodeFromWorldPoint(a.transform.position).IsOccupied = true;
+                if (a != null)
+                    NodeFromWorldPoint(a.transform.position).IsOccupied = true;
             }
         }
     }
@@ -90,6 +94,11 @@ public class AStarGrid : MonoBehaviour
         int x = Mathf.RoundToInt((gridSizeX - 1) * percentX);
         int z = Mathf.RoundToInt((gridSizeZ - 1) * percentZ);
 
+        if (grid == null)
+        {
+            CreateGrid();
+        }
+
         return grid[x, z];
     }
 
@@ -119,28 +128,31 @@ public class AStarGrid : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.DrawWireCube(transform.position, GridWorldSize);
-
-        if (grid != null)
+        if (ShowGridGizmos)
         {
-            foreach (AStarNode n in grid)
-            {
-                if (n.IsOccupied) Gizmos.color = Color.cyan;
-                else if (n.IsWalkable) Gizmos.color = Color.white;
-                else Gizmos.color = Color.red;
+            Gizmos.DrawWireCube(transform.position, GridWorldSize);
 
-                if(Paths != null)
+            if (grid != null)
+            {
+                foreach (AStarNode n in grid)
                 {
-                    foreach (List<AStarNode> path in Paths)
+                    if (n.IsOccupied) Gizmos.color = Color.cyan;
+                    else if (n.IsWalkable) Gizmos.color = Color.white;
+                    else Gizmos.color = Color.red;
+
+                    if (Paths != null)
                     {
-                        if (path.Contains(n))
+                        foreach (List<AStarNode> path in Paths)
                         {
-                            Gizmos.color = Color.blue;
+                            if (path.Contains(n))
+                            {
+                                Gizmos.color = Color.blue;
+                            }
                         }
                     }
-                }
 
-                Gizmos.DrawWireCube(n.WorldPosition, Vector3.one * (nodeDiameter - .1f));
+                    Gizmos.DrawWireCube(n.WorldPosition, Vector3.one * (nodeDiameter - .1f));
+                }
             }
         }
 

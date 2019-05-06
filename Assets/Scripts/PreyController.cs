@@ -27,10 +27,11 @@ public class PreyController : MonoBehaviour {
 
     private GameObject flockTarget;
 
+    private GameObject enemy;
     private Vector3 enemyDir;
     readonly float fleeTime = 3f;
     float fleeTimer;
-    readonly float alertTime = 3f;
+    readonly float alertTime = 5f;
     float alertTimer;
 
     float worldLowerX, worldUpperX,
@@ -173,6 +174,10 @@ public class PreyController : MonoBehaviour {
         {
             enemyDir = other.transform.position - this.transform.position;
 
+            // Plug in A* algorithm, to path to source of sound
+            enemy = other.transform.parent.gameObject;
+            this.GetComponent<AStarPathFinding>().PathTarget = enemy;
+
             if (PrState != PreyState.flee)
             {
                 PrState = PreyState.alert;
@@ -203,8 +208,7 @@ public class PreyController : MonoBehaviour {
                 rb.transform.Translate(Vector3.forward * speed * 1.5f);
 
                 // If the agent has a path available, rotate towards the next node on the path.
-                // Note: this results in an out-of-range exception when the path is only 1 node.
-                if (this.GetComponent<AStarPathFinding>().Path != null)
+                if (this.GetComponent<AStarPathFinding>().Path != null && this.GetComponent<AStarPathFinding>().PathTarget != null)
                 {
                     if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
                     {
@@ -232,6 +236,8 @@ public class PreyController : MonoBehaviour {
 
                 eatTarget.SetActive(false);
 
+                this.GetComponent<AStarPathFinding>().PathTarget = null;
+
                 PrState = PreyState.roam;
             }
         }
@@ -247,10 +253,25 @@ public class PreyController : MonoBehaviour {
 
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
 
-        rb.transform.Translate(Vector3.forward * speed * 0.5f);
+        rb.transform.Translate(Vector3.forward * speed * 0.75f);
+
+        // If the agent has a path available, rotate towards the next node on the path.
+        if (this.GetComponent<AStarPathFinding>().Path != null && this.GetComponent<AStarPathFinding>().PathTarget != null)
+        {
+            if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
+            {
+                targetRotation = Quaternion.LookRotation(this.GetComponent<AStarPathFinding>().Path[1].WorldPosition - this.transform.position);
+            }
+            else
+            {
+                targetRotation = Quaternion.LookRotation(enemyDir);
+            }
+        }
 
         if (alertTimer >= alertTime)
         {
+            this.GetComponent<AStarPathFinding>().PathTarget = null;
+
             PrState = PreyState.roam;
             NextRoamPos = this.transform.position;
             //print(this + "state set to roam");
@@ -260,7 +281,7 @@ public class PreyController : MonoBehaviour {
     private void UpdateStateFlock()
     {
         // Flee if the flock target has been destroyed
-        if (!flockTarget)
+        if (!flockTarget || !flockTarget.activeInHierarchy)
         {
             enemyDir = NextRoamPos;
 

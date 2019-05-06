@@ -26,7 +26,7 @@ public class PredatorController : MonoBehaviour {
 
     private Vector3 preyDir;
 
-    readonly float alertTime = 3f;
+    readonly float alertTime = 5f;
     float alertTimer;
 
     readonly float huntMinTime = 3f;
@@ -145,6 +145,8 @@ public class PredatorController : MonoBehaviour {
         {
             preyDir = other.transform.position - this.transform.position;
 
+            this.GetComponent<AStarPathFinding>().PathTarget = other.transform.parent.gameObject;
+
             if (predState != PredatorState.hunt)
             {
                 predState = PredatorState.alert;
@@ -157,6 +159,8 @@ public class PredatorController : MonoBehaviour {
             ScentController sCont = other.GetComponent<ScentController>();
 
             preyDir = sCont.OrigPosition - this.transform.position;
+
+            this.GetComponent<AStarPathFinding>().PathTarget = sCont.ScentSource;
 
             if (predState != PredatorState.hunt)
             {
@@ -171,12 +175,23 @@ public class PredatorController : MonoBehaviour {
         alertTimer += Time.deltaTime;
 
         targetRotation = Quaternion.LookRotation(preyDir);
+
+        if (this.GetComponent<AStarPathFinding>().Path != null)
+        {
+            if (this.GetComponent<AStarPathFinding>().Path.Count > 1)
+            {
+                targetRotation = Quaternion.LookRotation(this.GetComponent<AStarPathFinding>().Path[1].WorldPosition - this.transform.position);
+            }
+        }
+
         rb.transform.rotation = Quaternion.Slerp(rb.transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
 
         rb.transform.Translate(Vector3.forward * speed * 0.5f);
 
         if (alertTimer >= alertTime)
         {
+            this.GetComponent<AStarPathFinding>().PathTarget = null;
+
             predState = PredatorState.roam;
             NextRoamPos = this.transform.position;
             //print(this + " state set to roam");
@@ -224,6 +239,12 @@ public class PredatorController : MonoBehaviour {
                 NextRoamPos = new Vector3(NextRoamPos.x, NextRoamPos.y, UnityEngine.Random.Range(worldLowerZ, worldUpperZ));
             }
 
+            targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
+        }
+
+        // Force target rotation if agent is out of bounds
+        if (IsOutOfBounds(this.transform.position))
+        {
             targetRotation = Quaternion.LookRotation(NextRoamPos - rb.transform.position);
         }
 
@@ -359,6 +380,17 @@ public class PredatorController : MonoBehaviour {
         dir2.Normalize();
 
         if (dir1.x - dir2.x < 0.35f && dir1.z - dir2.z < 0.35f)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsOutOfBounds(Vector3 position)
+    {
+        if (position.x > worldUpperX || position.x < worldLowerX ||
+            position.z > worldUpperZ || position.z < worldLowerZ)
         {
             return true;
         }
