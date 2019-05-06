@@ -64,7 +64,7 @@ public class PlayerController : MonoBehaviour {
         {
             Instantiate(Projectile, ProjectileSpawn.transform);
 
-            SpawnSoundSphere(FootstepSoundScale * 5f);
+            SpawnSoundSphere(FootstepSoundScale * 3f);
 
             attackTimer = 0f;
         }
